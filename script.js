@@ -1,3 +1,5 @@
+'use strict';
+/* Refactored: functionality preserved */
 // ---- TRAIL DATA (real HVA Open Studios 2026 data, parsed from WordPress export) ----
 const locations = [
   { venue:"1", lat:51.8252911, lng:-0.7069222, days:{ 5:{"Lynne Bruges":"11am-5pm"},6:{"Lynne Bruges":"11am-5pm"},10:{"Lynne Bruges":"11am-5pm"},11:{"Lynne Bruges":"11am-5pm"},12:{"Lynne Bruges":"11am-5pm"},13:{"Lynne Bruges":"11am-5pm"},17:{"Lynne Bruges":"11am-5pm"},18:{"Lynne Bruges":"11am-5pm"},19:{"Lynne Bruges":"11am-5pm"},20:{"Lynne Bruges":"11am-5pm"},24:{"Lynne Bruges":"11am-5pm"},25:{"Lynne Bruges":"11am-5pm"},26:{"Lynne Bruges":"11am-5pm"},27:{"Lynne Bruges":"11am-5pm"} } },
