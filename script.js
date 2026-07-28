@@ -1163,7 +1163,7 @@ function buildListView(){
             "<button class=\"miniIconBtn loveMini" + (isLoved ? " active" : "") + "\" title=\"Love this artist\">" + loveButtonLabel(artist) + "</button>" +
             "<button class=\"miniIconBtn commentMini\" title=\"Comments\">" + commentButtonLabel(artist) + "</button>" +
             "<button class=\"miniIconBtn shareMini\" title=\"Share / forward\">\u27a1\ufe0f Share</button>" +
-            "<button class=\"visitedPill visitedMini" + (isVisited ? " active" : "") + "\" title=\"Mark as visited\">" + (isVisited ? "\u2713 Visited" : "Mark Visited") + "</button>" +
+            "<button class=\"visitedPill visitedMini" + (isVisited ? " active" : "") + "\" title=\"Mark as visited\">" + visitButtonLabel(loc.venue, isVisited) + "</button>" +
           "</div>" +
           "<div class=\"inlineCommentPanel\">" +
             "<div class=\"inlineCommentList\"></div>" +
@@ -1197,7 +1197,7 @@ function buildListView(){
             "<button class=\"miniIconBtn loveMini" + (isLoved ? " active" : "") + "\" title=\"Love this artist\">" + loveButtonLabel(artist) + "</button>" +
             "<button class=\"miniIconBtn commentMini\" title=\"Comments\">" + commentButtonLabel(artist) + "</button>" +
             "<button class=\"miniIconBtn shareMini\" title=\"Share / forward\">\u27a1\ufe0f Share</button>" +
-            "<button class=\"visitedPill visitedMini" + (isVisited ? " active" : "") + "\" title=\"Mark as visited\">" + (isVisited ? "\u2713 Visited" : "Mark Visited") + "</button>" +
+            "<button class=\"visitedPill visitedMini" + (isVisited ? " active" : "") + "\" title=\"Mark as visited\">" + visitButtonLabel(loc.venue, isVisited) + "</button>" +
           "</div>" +
           "<div class=\"inlineCommentPanel\">" +
             "<div class=\"inlineCommentList\"></div>" +
