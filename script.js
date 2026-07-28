@@ -705,45 +705,30 @@ function handlePinTap(loc, focusArtist){
 }
 
 function toggleVisitedVenue(venueNum) {
-  const idx = visitedVenues.indexOf(venueNum);
-  const nowVisited = idx === -1;
-  if (idx > -1) {
-    visitedVenues.splice(idx, 1);
-  } else {
-    visitedVenues.push(venueNum);
-  }
-  visitCounts[venueNum] = Math.max(0, (visitCounts[venueNum] || 0) + (nowVisited ? 1 : -1));
+  // One-way: once a visitor marks a venue visited, it can't be un-marked.
+  if (visitedVenues.includes(venueNum)) return;
+  visitedVenues.push(venueNum);
+  visitCounts[venueNum] = (visitCounts[venueNum] || 0) + 1;
   renderMap();
 
   if(!supabaseClient || !currentUserId) return;
-  if(nowVisited){
-    supabaseClient.from("visits").upsert(
-      { user_id: currentUserId, venue: venueNum },
-      { onConflict: "user_id,venue" }
-    ).then(function(res){ if(res.error) console.error("visit save failed:", res.error); });
-  } else {
-    supabaseClient.from("visits").delete()
-      .eq("user_id", currentUserId).eq("venue", venueNum)
-      .then(function(res){ if(res.error) console.error("visit delete failed:", res.error); });
-  }
+  supabaseClient.from("visits").upsert(
+    { user_id: currentUserId, venue: venueNum },
+    { onConflict: "user_id,venue" }
+  ).then(function(res){ if(res.error) console.error("visit save failed:", res.error); });
 }
 
 function toggleArtistLove(artistName) {
-  const nowLoved = !lovedStudios[artistName];
-  lovedStudios[artistName] = nowLoved;
-  loveCounts[artistName] = Math.max(0, (loveCounts[artistName] || 0) + (nowLoved ? 1 : -1));
+  // One-way: once a visitor loves an artist, it can't be un-loved.
+  if (lovedStudios[artistName]) return;
+  lovedStudios[artistName] = true;
+  loveCounts[artistName] = (loveCounts[artistName] || 0) + 1;
 
   if(!supabaseClient || !currentUserId) return;
-  if(nowLoved){
-    supabaseClient.from("loves").upsert(
-      { user_id: currentUserId, artist_name: artistName },
-      { onConflict: "user_id,artist_name" }
-    ).then(function(res){ if(res.error) console.error("love save failed:", res.error); });
-  } else {
-    supabaseClient.from("loves").delete()
-      .eq("user_id", currentUserId).eq("artist_name", artistName)
-      .then(function(res){ if(res.error) console.error("love delete failed:", res.error); });
-  }
+  supabaseClient.from("loves").upsert(
+    { user_id: currentUserId, artist_name: artistName },
+    { onConflict: "user_id,artist_name" }
+  ).then(function(res){ if(res.error) console.error("love save failed:", res.error); });
 }
 
 function submitArtistNote(artistName, message) {
