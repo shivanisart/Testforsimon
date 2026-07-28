@@ -11,6 +11,9 @@ const supabaseClient = (SUPABASE_URL.indexOf("YOUR_") !== 0 && window.supabase)
 
 let currentUserId = null;
 let supabaseReady = null; // promise that resolves once auth + initial data is loaded
+let loveCounts = {};    // artist_name -> total number of loves (all visitors)
+let commentCounts = {}; // artist_name -> total number of comments (all visitors)
+let visitCounts = {};   // venue -> total number of visitors who marked it visited
 
 // Every visitor gets a persistent anonymous Supabase auth user the first time
 // they open the trail. The resulting user id is what loves/visits/comments
@@ -29,7 +32,7 @@ async function initSupabase(){
       session = data.session;
     }
     currentUserId = session.user.id;
-    await loadUserFeedbackState();
+    await Promise.all([loadUserFeedbackState(), loadFeedbackCounts()]);
   } catch(err){
     console.error("Supabase init failed:", err);
   }
@@ -49,6 +52,51 @@ async function loadUserFeedbackState(){
   if(!visitsRes.error && visitsRes.data){
     visitedVenues = visitsRes.data.map(function(row){ return row.venue; });
   }
+}
+
+// Pull the public, aggregate love/comment/visit counts (across every
+// visitor) so they can be shown on the buttons, e.g. "❤️ Love (12)" /
+// "✓ Visited (34)". Requires the *_counts views + grants from
+// supabase_schema.sql / supabase_schema_add_counts.sql.
+async function loadFeedbackCounts(){
+  if(!supabaseClient) return;
+  const [loveRes, commentRes, visitRes] = await Promise.all([
+    supabaseClient.from("love_counts").select("artist_name, loves"),
+    supabaseClient.from("comment_counts").select("artist_name, comments"),
+    supabaseClient.from("visit_counts").select("venue, visits")
+  ]);
+  if(!loveRes.error && loveRes.data){
+    loveCounts = {};
+    loveRes.data.forEach(function(row){ loveCounts[row.artist_name] = row.loves; });
+  } else if(loveRes.error){
+    console.error("love counts fetch failed:", loveRes.error);
+  }
+  if(!commentRes.error && commentRes.data){
+    commentCounts = {};
+    commentRes.data.forEach(function(row){ commentCounts[row.artist_name] = row.comments; });
+  } else if(commentRes.error){
+    console.error("comment counts fetch failed:", commentRes.error);
+  }
+  if(!visitRes.error && visitRes.data){
+    visitCounts = {};
+    visitRes.data.forEach(function(row){ visitCounts[row.venue] = row.visits; });
+  } else if(visitRes.error){
+    console.error("visit counts fetch failed:", visitRes.error);
+  }
+}
+
+function loveButtonLabel(artistName){
+  const n = loveCounts[artistName] || 0;
+  return "\u2764\ufe0f Love" + (n > 0 ? " (" + n + ")" : "");
+}
+function commentButtonLabel(artistName){
+  const n = commentCounts[artistName] || 0;
+  return "\ud83d\udcac Comment" + (n > 0 ? " (" + n + ")" : "");
+}
+function visitButtonLabel(venueNum, isVisited){
+  const n = visitCounts[venueNum] || 0;
+  const base = isVisited ? "\u2713 Visited" : "Mark Visited";
+  return base + (n > 0 ? " (" + n + ")" : "");
 }
 // ---- TRAIL DATA (real HVA Open Studios 2026 data, parsed from WordPress export) ----
 const locations = [
@@ -655,6 +703,7 @@ function toggleVisitedVenue(venueNum) {
   } else {
     visitedVenues.push(venueNum);
   }
+  visitCounts[venueNum] = Math.max(0, (visitCounts[venueNum] || 0) + (nowVisited ? 1 : -1));
   renderMap();
 
   if(!supabaseClient || !currentUserId) return;
@@ -673,6 +722,7 @@ function toggleVisitedVenue(venueNum) {
 function toggleArtistLove(artistName) {
   const nowLoved = !lovedStudios[artistName];
   lovedStudios[artistName] = nowLoved;
+  loveCounts[artistName] = Math.max(0, (loveCounts[artistName] || 0) + (nowLoved ? 1 : -1));
 
   if(!supabaseClient || !currentUserId) return;
   if(nowLoved){
@@ -694,6 +744,7 @@ function submitArtistNote(artistName, message) {
   // Optimistic local copy so the UI updates instantly even before the
   // Supabase write confirms / before it's refetched.
   studioNotes[artistName].push({ name: "A trail visitor", note: note });
+  commentCounts[artistName] = (commentCounts[artistName] || 0) + 1;
 
   if(!supabaseClient || !currentUserId) return;
   supabaseClient.from("comments").insert({
@@ -926,11 +977,11 @@ function openPanel(loc, focusArtist){
       "<div class=\"newTabHint\">Opens in a new tab \u2014 this trail map stays open behind it.</div>" +
     "</div>" +
     "<div class=\"panelActionsRow\">" +
-      "<button class=\"miniIconBtn loveMini" + (isLoved ? " active" : "") + "\" id=\"panelLoveBtn\" title=\"Love this artist\">\u2764\ufe0f Love</button>" +
-      "<button class=\"miniIconBtn commentMini\" id=\"panelCommentBtn\" title=\"Comments\">\ud83d\udcac Comment</button>" +
+      "<button class=\"miniIconBtn loveMini" + (isLoved ? " active" : "") + "\" id=\"panelLoveBtn\" title=\"Love this artist\">" + (firstArtistName ? loveButtonLabel(firstArtistName) : "\u2764\ufe0f Love") + "</button>" +
+      "<button class=\"miniIconBtn commentMini\" id=\"panelCommentBtn\" title=\"Comments\">" + (firstArtistName ? commentButtonLabel(firstArtistName) : "\ud83d\udcac Comment") + "</button>" +
       "<button class=\"miniIconBtn shareMini\" id=\"panelShareBtn\" title=\"Share / forward\">\u27a1\ufe0f Share</button>" +
       "<button class=\"visitedPill " + (isVisited ? "active" : "") + "\" id=\"toggleVisitAction\">" +
-        (isVisited ? "\u2713 Visited" : "Mark Visited") +
+        visitButtonLabel(loc.venue, isVisited) +
       "</button>" +
     "</div>" +
     "<div class=\"inlineCommentPanel\" id=\"panelCommentPanel\">" +
@@ -953,7 +1004,9 @@ function openPanel(loc, focusArtist){
   if(firstArtistName){
     document.getElementById("panelLoveBtn").onclick = function(){
       toggleArtistLove(firstArtistName);
-      document.getElementById("panelLoveBtn").classList.toggle("active", !!lovedStudios[firstArtistName]);
+      const btn = document.getElementById("panelLoveBtn");
+      btn.classList.toggle("active", !!lovedStudios[firstArtistName]);
+      btn.textContent = loveButtonLabel(firstArtistName);
     };
     const commentPanel = document.getElementById("panelCommentPanel");
     const commentList = document.getElementById("panelCommentList");
@@ -971,6 +1024,7 @@ function openPanel(loc, focusArtist){
       submitArtistNote(firstArtistName, input.value);
       input.value = "";
       renderInlineComments(commentList, firstArtistName);
+      document.getElementById("panelCommentBtn").textContent = commentButtonLabel(firstArtistName);
     };
   } else {
     document.getElementById("panelLoveBtn").style.display = "none";
@@ -1042,6 +1096,7 @@ function buildArtistRowActions(row, loc, artist, unvisitedColor){
   loveBtn.onclick = function(){
     toggleArtistLove(artist);
     loveBtn.classList.toggle("active", !!lovedStudios[artist]);
+    loveBtn.textContent = loveButtonLabel(artist);
   };
 
   commentBtn.onclick = function(){
@@ -1058,6 +1113,7 @@ function buildArtistRowActions(row, loc, artist, unvisitedColor){
     submitArtistNote(artist, commentInput.value);
     commentInput.value = "";
     renderInlineComments(commentList, artist);
+    commentBtn.textContent = commentButtonLabel(artist);
   };
 
   shareBtn.onclick = function(){
@@ -1068,7 +1124,7 @@ function buildArtistRowActions(row, loc, artist, unvisitedColor){
     toggleVisitedVenue(loc.venue);
     const nowVisited = visitedVenues.includes(loc.venue);
     visitedBtn.classList.toggle("active", nowVisited);
-    visitedBtn.textContent = nowVisited ? "\u2713 Visited" : "Mark Visited";
+    visitedBtn.textContent = visitButtonLabel(loc.venue, nowVisited);
     row.querySelector(".listDot").style.background = nowVisited ? "#6f42c1" : unvisitedColor;
   };
 }
@@ -1104,8 +1160,8 @@ function buildListView(){
           "</div>" +
           "<div class=\"listRowActions\">" +
             "<a class=\"directionsBigBtn\" href=\"" + getDirectionsUrl(loc.lat, loc.lng) + "\" target=\"_blank\" rel=\"noopener\">🗺️ Directions</a>" +
-            "<button class=\"miniIconBtn loveMini" + (isLoved ? " active" : "") + "\" title=\"Love this artist\">\u2764\ufe0f Love</button>" +
-            "<button class=\"miniIconBtn commentMini\" title=\"Comments\">\ud83d\udcac Comment</button>" +
+            "<button class=\"miniIconBtn loveMini" + (isLoved ? " active" : "") + "\" title=\"Love this artist\">" + loveButtonLabel(artist) + "</button>" +
+            "<button class=\"miniIconBtn commentMini\" title=\"Comments\">" + commentButtonLabel(artist) + "</button>" +
             "<button class=\"miniIconBtn shareMini\" title=\"Share / forward\">\u27a1\ufe0f Share</button>" +
             "<button class=\"visitedPill visitedMini" + (isVisited ? " active" : "") + "\" title=\"Mark as visited\">" + (isVisited ? "\u2713 Visited" : "Mark Visited") + "</button>" +
           "</div>" +
@@ -1138,8 +1194,8 @@ function buildListView(){
           "</div>" +
           "<div class=\"listRowActions\">" +
             "<a class=\"directionsBigBtn\" href=\"" + getDirectionsUrl(loc.lat, loc.lng) + "\" target=\"_blank\" rel=\"noopener\">🗺️ Directions</a>" +
-            "<button class=\"miniIconBtn loveMini" + (isLoved ? " active" : "") + "\" title=\"Love this artist\">\u2764\ufe0f Love</button>" +
-            "<button class=\"miniIconBtn commentMini\" title=\"Comments\">\ud83d\udcac Comment</button>" +
+            "<button class=\"miniIconBtn loveMini" + (isLoved ? " active" : "") + "\" title=\"Love this artist\">" + loveButtonLabel(artist) + "</button>" +
+            "<button class=\"miniIconBtn commentMini\" title=\"Comments\">" + commentButtonLabel(artist) + "</button>" +
             "<button class=\"miniIconBtn shareMini\" title=\"Share / forward\">\u27a1\ufe0f Share</button>" +
             "<button class=\"visitedPill visitedMini" + (isVisited ? " active" : "") + "\" title=\"Mark as visited\">" + (isVisited ? "\u2713 Visited" : "Mark Visited") + "</button>" +
           "</div>" +
