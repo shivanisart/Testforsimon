@@ -459,7 +459,7 @@ document.getElementById("loginSubmitBtn").onclick = function(){
     alert("Please enter a valid email address to start the open studio trail.");
     return;
   }
-  startTrail();
+  startTrail(emailInput);
 };
 
 document.getElementById("skipEmailBtn").onclick = function(){
@@ -518,7 +518,7 @@ document.getElementById("copyShareLinkBtn").onclick = function(){
   }
 };
 
-function startTrail(){
+function startTrail(email){
   document.getElementById("loginOverlay").classList.add("hide");
   initLeafletMap();
   fitMapToAllLocations();
@@ -533,6 +533,15 @@ function startTrail(){
     // have loaded from Supabase.
     renderMap();
     if(isListPanelOpen) buildListView();
+
+    // If they entered an email on the welcome screen, save it against their
+    // anon user id now that we have one.
+    if(email && supabaseClient && currentUserId){
+      supabaseClient.from("profiles").upsert(
+        { user_id: currentUserId, email: email },
+        { onConflict: "user_id" }
+      ).then(function(res){ if(res.error) console.error("welcome email save failed:", res.error); });
+    }
   });
 }
 
