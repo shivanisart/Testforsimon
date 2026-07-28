@@ -1,5 +1,55 @@
 'use strict';
 /* Edited: functionality preserved */
+
+// ---- SUPABASE CONFIG ----
+const SUPABASE_URL = "https://lzuqaaspspvtwlztqvob.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6dXFhYXNwc3B2dHdsenRxdm9iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyNjYyMjgsImV4cCI6MjEwMDg0MjIyOH0.Slleo6y4cOAOa8KrIlDuPzct1XmiE7UACLFz-39J0SY";
+
+const supabaseClient = (SUPABASE_URL.indexOf("YOUR_") !== 0 && window.supabase)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+let currentUserId = null;
+let supabaseReady = null; // promise that resolves once auth + initial data is loaded
+
+// Every visitor gets a persistent anonymous Supabase auth user the first time
+// they open the trail. The resulting user id is what loves/visits/comments
+// are stored against, and it is remembered locally so the same browser keeps
+// its data across visits (before/without entering an email).
+async function initSupabase(){
+  if(!supabaseClient) {
+    console.warn("Supabase is not configured yet — feedback (loves/comments/visited) will not be saved. Fill in SUPABASE_URL and SUPABASE_ANON_KEY in script.js.");
+    return;
+  }
+  try {
+    let { data: { session } } = await supabaseClient.auth.getSession();
+    if(!session){
+      const { data, error } = await supabaseClient.auth.signInAnonymously();
+      if(error) throw error;
+      session = data.session;
+    }
+    currentUserId = session.user.id;
+    await loadUserFeedbackState();
+  } catch(err){
+    console.error("Supabase init failed:", err);
+  }
+}
+
+// Pull this visitor's existing loves + visited venues from Supabase so their
+// state is restored on this device/browser (e.g. after a page refresh).
+async function loadUserFeedbackState(){
+  if(!supabaseClient || !currentUserId) return;
+  const [lovesRes, visitsRes] = await Promise.all([
+    supabaseClient.from("loves").select("artist_name").eq("user_id", currentUserId),
+    supabaseClient.from("visits").select("venue").eq("user_id", currentUserId)
+  ]);
+  if(!lovesRes.error && lovesRes.data){
+    lovesRes.data.forEach(function(row){ lovedStudios[row.artist_name] = true; });
+  }
+  if(!visitsRes.error && visitsRes.data){
+    visitedVenues = visitsRes.data.map(function(row){ return row.venue; });
+  }
+}
 // ---- TRAIL DATA (real HVA Open Studios 2026 data, parsed from WordPress export) ----
 const locations = [
   { venue:"1", lat:51.8252911, lng:-0.7069222, days:{ 5:{"Lynne Bruges":"11am-5pm"},6:{"Lynne Bruges":"11am-5pm"},10:{"Lynne Bruges":"11am-5pm"},11:{"Lynne Bruges":"11am-5pm"},12:{"Lynne Bruges":"11am-5pm"},13:{"Lynne Bruges":"11am-5pm"},17:{"Lynne Bruges":"11am-5pm"},18:{"Lynne Bruges":"11am-5pm"},19:{"Lynne Bruges":"11am-5pm"},20:{"Lynne Bruges":"11am-5pm"},24:{"Lynne Bruges":"11am-5pm"},25:{"Lynne Bruges":"11am-5pm"},26:{"Lynne Bruges":"11am-5pm"},27:{"Lynne Bruges":"11am-5pm"} } },
@@ -429,6 +479,13 @@ function startTrail(){
   renderMap();
   initGeolocation();
   setTimeout(function(){ if(leafletMap) leafletMap.invalidateSize(); }, 50);
+
+  supabaseReady = initSupabase().then(function(){
+    // Re-render now that this visitor's saved loves/visited venues (if any)
+    // have loaded from Supabase.
+    renderMap();
+    if(isListPanelOpen) buildListView();
+  });
 }
 
 function focusOnVenue(loc, focusArtist){
@@ -592,22 +649,56 @@ function handlePinTap(loc, focusArtist){
 
 function toggleVisitedVenue(venueNum) {
   const idx = visitedVenues.indexOf(venueNum);
+  const nowVisited = idx === -1;
   if (idx > -1) {
     visitedVenues.splice(idx, 1);
   } else {
     visitedVenues.push(venueNum);
   }
   renderMap();
+
+  if(!supabaseClient || !currentUserId) return;
+  if(nowVisited){
+    supabaseClient.from("visits").upsert(
+      { user_id: currentUserId, venue: venueNum },
+      { onConflict: "user_id,venue" }
+    ).then(function(res){ if(res.error) console.error("visit save failed:", res.error); });
+  } else {
+    supabaseClient.from("visits").delete()
+      .eq("user_id", currentUserId).eq("venue", venueNum)
+      .then(function(res){ if(res.error) console.error("visit delete failed:", res.error); });
+  }
 }
 
 function toggleArtistLove(artistName) {
-  lovedStudios[artistName] = !lovedStudios[artistName];
+  const nowLoved = !lovedStudios[artistName];
+  lovedStudios[artistName] = nowLoved;
+
+  if(!supabaseClient || !currentUserId) return;
+  if(nowLoved){
+    supabaseClient.from("loves").upsert(
+      { user_id: currentUserId, artist_name: artistName },
+      { onConflict: "user_id,artist_name" }
+    ).then(function(res){ if(res.error) console.error("love save failed:", res.error); });
+  } else {
+    supabaseClient.from("loves").delete()
+      .eq("user_id", currentUserId).eq("artist_name", artistName)
+      .then(function(res){ if(res.error) console.error("love delete failed:", res.error); });
+  }
 }
 
 function submitArtistNote(artistName, message) {
-  if(!message.trim()) return;
+  const note = message.trim();
+  if(!note) return;
   if(!studioNotes[artistName]) studioNotes[artistName] = [];
-  studioNotes[artistName].push({ name: "A trail visitor", note: message.trim() });
+  // Optimistic local copy so the UI updates instantly even before the
+  // Supabase write confirms / before it's refetched.
+  studioNotes[artistName].push({ name: "A trail visitor", note: note });
+
+  if(!supabaseClient || !currentUserId) return;
+  supabaseClient.from("comments").insert({
+    user_id: currentUserId, artist_name: artistName, note: note
+  }).then(function(res){ if(res.error) console.error("comment save failed:", res.error); });
 }
 
 function shareArtist(artistName, loc){
@@ -756,7 +847,19 @@ function buildTrailSheet(){
       alert("Please enter a valid email address.");
       return;
     }
-    document.getElementById("trailEmailRow").innerHTML = "<div class=\"trailNote\">Saved for this session.</div>";
+    if(supabaseClient && currentUserId){
+      supabaseClient.from("profiles").upsert(
+        { user_id: currentUserId, email: val },
+        { onConflict: "user_id" }
+      ).then(function(res){
+        document.getElementById("trailEmailRow").innerHTML = res.error
+          ? "<div class=\"trailNote\">Sorry, couldn't save that — please try again.</div>"
+          : "<div class=\"trailNote\">Saved. Your loves and visited venues on this device are now linked to your email.</div>";
+        if(res.error) console.error("profile save failed:", res.error);
+      });
+    } else {
+      document.getElementById("trailEmailRow").innerHTML = "<div class=\"trailNote\">Saved for this session.</div>";
+    }
   };
 }
 
@@ -887,13 +990,41 @@ function closePanel(){
 }
 document.getElementById("panelClose").onclick = closePanel;
 
-function renderInlineComments(listEl, artistName){
-  const notes = studioNotes[artistName] || [];
-  if(notes.length === 0){
+function escapeHtml(str){
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderCommentList(listEl, notes){
+  if(!notes || notes.length === 0){
     listEl.innerHTML = "<div class=\"inlineCommentItem\" style=\"font-style:italic;color:#999;\">No comments yet — be the first!</div>";
   } else {
-    listEl.innerHTML = notes.map(function(n){ return "<div class=\"inlineCommentItem\">" + n.note + "</div>"; }).join("");
+    listEl.innerHTML = notes.map(function(n){ return "<div class=\"inlineCommentItem\">" + escapeHtml(n.note) + "</div>"; }).join("");
   }
+}
+
+async function renderInlineComments(listEl, artistName){
+  // Comments are a shared public feed (everyone on the trail sees the same
+  // notes for an artist), so fetch the latest set from Supabase each time
+  // the panel is opened, rather than relying only on the local cache.
+  if(!supabaseClient){
+    renderCommentList(listEl, studioNotes[artistName]);
+    return;
+  }
+  listEl.innerHTML = "<div class=\"inlineCommentItem\" style=\"font-style:italic;color:#999;\">Loading comments…</div>";
+  const { data, error } = await supabaseClient
+    .from("comments")
+    .select("note, created_at")
+    .eq("artist_name", artistName)
+    .order("created_at", { ascending: true });
+  if(error){
+    console.error("comment fetch failed:", error);
+    renderCommentList(listEl, studioNotes[artistName]);
+    return;
+  }
+  studioNotes[artistName] = data.map(function(row){ return { name: "A trail visitor", note: row.note }; });
+  renderCommentList(listEl, studioNotes[artistName]);
 }
 
 function buildArtistRowActions(row, loc, artist, unvisitedColor){
