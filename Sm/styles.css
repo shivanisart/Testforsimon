@@ -109,7 +109,7 @@ html,body{margin:0;padding:0;min-height:100%;font-family:"Helvetica Neue",Helvet
 
   #shareOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2100;display:none;align-items:center;justify-content:center;padding:20px;}
   #shareOverlay.show{display:flex;}
-  #shareBox{position:relative;background:#ffffff;border:1px solid #000000;border-radius:12px;padding:48px 20px;width:100%;max-width:340px;box-shadow:0 4px 20px rgba(0,0,0,0.3);text-align:center;}
+  #shareBox{position:relative;background:#ffffff;border:1px solid #000000;border-radius:12px;padding:48px 20px 24px;width:100%;max-width:340px;box-shadow:0 4px 20px rgba(0,0,0,0.3);text-align:center;}
   #shareBox h2{margin:0 0 6px;font-size:17px;color:#000000;}
   #shareBox p{margin:0 0 12px;font-size:12.5px;color:#555;}
   #shareBoxClose{position:absolute;top:10px;right:12px;background:none;border:none;font-size:16px;color:#000;cursor:pointer;padding:4px;}
@@ -201,5 +201,26 @@ html,body{margin:0;padding:0;min-height:100%;font-family:"Helvetica Neue",Helvet
   .trailStatRow .lbl{color:#333;}
   .trailStatRow .val{font-weight:700;}
   .trailNote{font-size:11px;color:#777;line-height:1.4;margin-top:12px;}
+
+/* Standard close/done button — same spot, same colours, on every popup */
+.stdCloseBtn{position:absolute;top:max(10px, env(safe-area-inset-top));right:max(10px, env(safe-area-inset-right));width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#e9e9e9;border:none;border-radius:50%;font-size:15px;line-height:1;color:#555;cursor:pointer;z-index:6;}
+.stdCloseBtn:active{background:#dcdcdc;}
+.sheetTopBar .sheetDoneBtn{background:#e9e9e9;color:#555;border-radius:50%;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;font-size:0;position:relative;}
+.sheetTopBar .sheetDoneBtn::after{content:"✓";font-size:16px;}
+
+#galleryPanel{position:fixed;left:0;right:0;bottom:0;top:8%;background:#ffffff;border-radius:14px 14px 0 0;box-shadow:0 -2px 15px rgba(0,0,0,0.25);padding:48px 14px 22px;transform:translateY(110%);transition:transform 0.25s ease;z-index:25;overflow-y:auto;overflow-x:hidden;color:#333333;box-sizing:border-box;}
+#galleryPanel.show{transform:translateY(0);}
+#galleryTitle{margin:0 0 10px 0;font-size:17px;color:#333333;text-align:center;}
+#galleryScopeRow{display:flex;gap:8px;margin-bottom:12px;}
+#galleryScopeRow .filterBtn{flex:1 1 0;}
+#galleryGrid{display:grid;grid-template-columns:repeat(auto-fill, minmax(96px, 1fr));gap:10px;width:100%;box-sizing:border-box;}
+.galleryTile{cursor:pointer;box-sizing:border-box;}
+.galleryTilePhoto{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;background:#ddd;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;}
+.galleryTileCaption{margin-top:4px;text-align:center;line-height:1.25;}
+.galleryTileName{display:block;font-size:11px;font-weight:700;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.galleryTileVenue{display:block;font-size:10px;color:#777;}
+#galleryEmptyMsg{text-align:center;color:#888;font-size:13px;padding:30px 10px;}
+
+
 
   footer {background: #ffffff; color: #000000; text-align: center; font-size: 11px; padding: 6px 10px; flex: 0 0 auto; border-top: 1px solid #000000;}
