@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>Herts Visual Arts Open Studios Trail</title>
+  <meta name="description" content="Herts Visual Arts Open Studios Trail">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="Herts Visual Arts Open Studios Trail">
 <meta name="theme-color" content="#ffffff">
@@ -99,9 +101,13 @@
 <div id="scrim"></div>
 
 <div id="dateSheet" class="sheetPanel">
-  <h2>Choose a date</h2>
+  <div class="sheetTopBar">
+    <h2 style="margin:0;">Choose a date</h2>
+    <button id="dateSheetDone" class="sheetDoneBtn" aria-label="Done"></button>
+  </div>
   <div id="dateSheetList"></div>
 </div>
+
 <div id="typeSheet" class="sheetPanel">
   <div class="sheetTopBar">
     <h2 style="margin:0;">What are you interested in?</h2>
@@ -109,10 +115,16 @@
   </div>
   <div id="typeSheetList"></div>
 </div>
+
 <div id="trailSheet" class="sheetPanel">
-  <h2>My Trail</h2>
+  <div class="sheetTopBar">
+    <h2 style="margin:0;">My Trail</h2>
+    <button id="trailSheetDone" class="sheetDoneBtn" aria-label="Done"></button>
+  </div>
   <div id="trailSheetBody"></div>
 </div>
+
+  
 
 <div id="shareOverlay">
   <div id="shareBox">
@@ -146,6 +158,24 @@
   </div>
 </div>
 
+  <div id="galleryPanel">
+  <button id="galleryClose" class="stdCloseBtn" aria-label="Close">✕</button>
+  <h2 id="galleryTitle">All Artists Gallery</h2>
+  <div id="galleryScopeRow">
+    <button id="galleryScopeToday" class="filterBtn active">Open today</button>
+    <button id="galleryScopeAll" class="filterBtn">Everyone in the trail</button>
+  </div>
+  <div id="galleryGrid"></div>
+</div>
+
+
+
+
+
+
+
+  
+  
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="script.js"></script>
 </body>
