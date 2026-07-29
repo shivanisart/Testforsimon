@@ -86,9 +86,9 @@ html,body{margin:0;padding:0;min-height:100%;font-family:"Helvetica Neue",Helvet
   #legend{position:absolute;top:12px;left:14px;background:rgba(255,255,255,0.95);padding:6px 10px;border-radius:8px;font-size:10.5px;box-shadow:0 1px 5px rgba(0,0,0,0.15);z-index:5;color:#333333;line-height:1.5;display:flex;flex-direction:column;gap:1px;}
   .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;}
   
-  #panel{position:fixed;left:0;right:0;bottom:0;background:#ffffff;border-radius:14px 14px 0 0;box-shadow:0 -2px 15px rgba(0,0,0,0.2);padding:16px 18px 22px;transform:translateY(110%);transition:transform 0.25s ease;z-index:20;max-height:65%;overflow-y:auto;color:#333333;}
+  #panel{position:fixed;left:0;right:0;bottom:0;background:#ffffff;border-radius:14px 14px 0 0;box-shadow:0 -2px 15px rgba(0,0,0,0.2);padding:48px 18px 22px;transform:translateY(110%);transition:transform 0.25s ease;z-index:20;max-height:65%;overflow-y:auto;color:#333333;}
   #panel.show{transform:translateY(0);}
-  #panelClose{position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;color:#888;cursor:pointer;}
+
   #panel h2{margin:0 0 4px 0;font-size:16px;color:#333333;text-align:center;}
   #panel .sub{color:#666;font-size:12px;margin-bottom:12px;}
   .artistRow{padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#333333;}
@@ -109,7 +109,7 @@ html,body{margin:0;padding:0;min-height:100%;font-family:"Helvetica Neue",Helvet
 
   #shareOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2100;display:none;align-items:center;justify-content:center;padding:20px;}
   #shareOverlay.show{display:flex;}
-  #shareBox{position:relative;background:#ffffff;border:1px solid #000000;border-radius:12px;padding:24px 20px;width:100%;max-width:340px;box-shadow:0 4px 20px rgba(0,0,0,0.3);text-align:center;}
+  #shareBox{position:relative;background:#ffffff;border:1px solid #000000;border-radius:12px;padding:48px 20px;width:100%;max-width:340px;box-shadow:0 4px 20px rgba(0,0,0,0.3);text-align:center;}
   #shareBox h2{margin:0 0 6px;font-size:17px;color:#000000;}
   #shareBox p{margin:0 0 12px;font-size:12.5px;color:#555;}
   #shareBoxClose{position:absolute;top:10px;right:12px;background:none;border:none;font-size:16px;color:#000;cursor:pointer;padding:4px;}
@@ -138,10 +138,10 @@ html,body{margin:0;padding:0;min-height:100%;font-family:"Helvetica Neue",Helvet
   #scrim{position:fixed;inset:0;background:rgba(0,0,0,0.4);opacity:0;pointer-events:none;transition:opacity 0.25s ease;z-index:15;}
   #scrim.show{opacity:1;pointer-events:auto;}
 
-  #listPanel{position:fixed;left:0;right:0;bottom:0;top:8%;background:#ffffff;border-radius:14px 14px 0 0;box-shadow:0 -2px 15px rgba(0,0,0,0.25);padding:16px 14px 22px;transform:translateY(110%);transition:transform 0.25s ease;z-index:25;overflow-y:auto;color:#333333;}
+  #listPanel{position:fixed;left:0;right:0;bottom:0;top:8%;background:#ffffff;border-radius:14px 14px 0 0;box-shadow:0 -2px 15px rgba(0,0,0,0.25);padding:48px 14px 22px;transform:translateY(110%);transition:transform 0.25s ease;z-index:25;overflow-y:auto;color:#333333;}
   #listPanel.show{transform:translateY(0);}
   #listPanel h2{margin:6px 0 2px 0;font-size:17px;color:#333333;text-align:center;}
-  #listClose{position:absolute;top:10px;left:14px;background:#000;color:#fff;border:none;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer;padding:7px 14px;}
+
   #listCols{display:flex;gap:12px;flex-direction:column;}
   .listCol{width:100%;min-width:0;}
   .listColHead{font-size:12px;font-weight:700;padding:6px 10px;border-radius:6px;margin-bottom:10px;color:#ffffff;}
