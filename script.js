@@ -1020,6 +1020,12 @@ function openPanel(loc, focusArtist){
       renderInlineComments(commentList, firstArtistName);
       document.getElementById("panelCommentBtn").textContent = commentButtonLabel(firstArtistName);
     };
+    document.getElementById("panelCommentInput").onkeydown = function(e){
+      if(e.key === "Enter"){
+        e.preventDefault();
+        document.getElementById("panelCommentSend").click();
+      }
+    };
   } else {
     document.getElementById("panelLoveBtn").style.display = "none";
     document.getElementById("panelCommentBtn").style.display = "none";
@@ -1108,6 +1114,13 @@ function buildArtistRowActions(row, loc, artist, unvisitedColor){
     commentInput.value = "";
     renderInlineComments(commentList, artist);
     commentBtn.textContent = commentButtonLabel(artist);
+  };
+
+  commentInput.onkeydown = function(e){
+    if(e.key === "Enter"){
+      e.preventDefault();
+      commentSendBtn.click();
+    }
   };
 
   shareBtn.onclick = function(){
