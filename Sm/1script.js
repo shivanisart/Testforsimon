@@ -1234,6 +1234,86 @@ function closeListPanel(){
   document.getElementById("scrim").classList.remove("show");
 }
 document.getElementById("listToggle").onclick = openListPanel;
+
+let galleryScope = "today";
+
+function buildGalleryGrid(){
+  const grid = document.getElementById("galleryGrid");
+  grid.innerHTML = "";
+  const seen = new Set();
+  const tiles = [];
+  currentLocations.forEach(function(loc){
+    const openToday = loc.days[selectedDate];
+    let artistsHere;
+    if(galleryScope === "today"){
+      if(!openToday) return;
+      artistsHere = Object.keys(openToday);
+    } else {
+      const allArtists = new Set();
+      Object.values(loc.days).forEach(function(d){ Object.keys(d).forEach(function(n){ allArtists.add(n); }); });
+      artistsHere = Array.from(allArtists);
+    }
+    artistsHere.forEach(function(artist){
+      if(seen.has(artist)) return;
+      const info = ARTIST_INFO[artist] || {};
+      if(typeFilter.size > 0){
+        const t = info.types || [];
+        if(!t.some(function(tt){ return typeFilter.has(tt); })) return;
+      }
+      seen.add(artist);
+      tiles.push({ artist: artist, loc: loc });
+    });
+  });
+  if(tiles.length === 0){
+    grid.innerHTML = "<div id=\"galleryEmptyMsg\">No artists match right now.</div>";
+    return;
+  }
+  tiles.sort(function(a,b){ return a.artist.localeCompare(b.artist); });
+  tiles.forEach(function(t){
+    const info = ARTIST_INFO[t.artist] || {};
+    const tile = document.createElement("div");
+    tile.className = "galleryTile";
+    const photoHtml = info.photo
+      ? ("<img src=\"" + info.photo + "\" class=\"galleryTilePhoto\" alt=\"\" loading=\"lazy\" " +
+         "data-fallback-bg=\"" + avatarColorForName(t.artist) + "\" data-fallback-text=\"" + getInitials(t.artist) + "\" " +
+         "onerror=\"avatarImgError(this)\">")
+      : ("<div class=\"galleryTilePhoto\" style=\"background:" + avatarColorForName(t.artist) + ";\">" + getInitials(t.artist) + "</div>");
+    tile.innerHTML = photoHtml +
+      "<div class=\"galleryTileCaption\">" +
+        "<span class=\"galleryTileName\">" + t.artist + "</span>" +
+        "<span class=\"galleryTileVenue\">Venue " + t.loc.venue + "</span>" +
+      "</div>";
+    tile.onclick = function(){ closeGalleryPanel(); handlePinTap(t.loc, t.artist); };
+    grid.appendChild(tile);
+  });
+}
+
+function openGalleryPanel(){
+  buildGalleryGrid();
+  document.getElementById("galleryPanel").classList.add("show");
+  document.getElementById("scrim").classList.add("show");
+}
+function closeGalleryPanel(){
+  document.getElementById("galleryPanel").classList.remove("show");
+  document.getElementById("scrim").classList.remove("show");
+}
+document.getElementById("galleryToggle").onclick = openGalleryPanel;
+document.getElementById("galleryClose").onclick = closeGalleryPanel;
+document.getElementById("galleryScopeToday").onclick = function(){
+  galleryScope = "today";
+  document.getElementById("galleryScopeToday").classList.add("active");
+  document.getElementById("galleryScopeAll").classList.remove("active");
+  buildGalleryGrid();
+};
+document.getElementById("galleryScopeAll").onclick = function(){
+  galleryScope = "all";
+  document.getElementById("galleryScopeAll").classList.add("active");
+  document.getElementById("galleryScopeToday").classList.remove("active");
+  buildGalleryGrid();
+};
+document.getElementById("dateSheetDone").onclick = function(){ closeAllSheets(); };
+document.getElementById("trailSheetDone").onclick = function(){ closeAllSheets(); };
+
 document.getElementById("dateSummaryBtn").onclick = function(){ buildDateSheet(); openSheet("dateSheet"); };
 document.getElementById("artTypeFilterBtn").onclick = function(){ buildTypeSheet(); openSheet("typeSheet"); };
 document.getElementById("closedToggleBtn").onclick = function(){
@@ -1257,7 +1337,10 @@ document.getElementById("typeSheetDone").onclick = function(){
   closeAllSheets();
 };
 document.getElementById("listClose").onclick = closeListPanel;
-document.getElementById("scrim").onclick = function(){ closePanel(); closeListPanel(); closeAllSheets(); };
+
+document.getElementById("scrim").onclick = function(){ closePanel(); closeListPanel(); closeGalleryPanel(); closeAllSheets(); };
+
+
 
 function renderMap(){
   if(!currentLocations || !leafletMap || !markersLayer) return;
